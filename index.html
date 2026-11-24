@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>百廿师大 · 一条时间轴</title>
+<meta name="description" content="从 1902 年的顺天府学堂，到今天的河北师范大学，一条可以滑动的时间轴。">
+<style>
+:root{
+  --red:#9e1b32; --red-deep:#7d1426; --gold:#b8945a; --ink:#241f1c;
+  --ink2:#4a423d; --gray:#8a807a; --paper:#fbf8f2; --line:#e6ded2;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{background:#efe7da}
+body{
+  font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,sans-serif;
+  color:var(--ink); line-height:1.8; -webkit-font-smoothing:antialiased;
+}
+.serif{font-family:"Source Han Serif SC","Noto Serif SC","Songti SC",STSong,SimSun,serif}
+
+/* 手机画布：桌面端显示为居中的竖屏 */
+.stage{max-width:520px;margin:0 auto;background:var(--paper);min-height:100vh;position:relative;overflow:hidden;
+  box-shadow:0 0 60px rgba(60,40,30,.18)}
+@media (max-width:560px){ .stage{box-shadow:none} }
+
+/* 顶部进度 */
+.bar{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(158,27,50,.12);z-index:30}
+.bar i{display:block;height:100%;width:0;background:var(--red);transition:width .1s linear}
+
+/* 封面 */
+.cover{min-height:var(--cover-h,100vh);display:flex;flex-direction:column;justify-content:center;padding:0 34px;position:relative;
+  background:radial-gradient(circle at 20% 12%, #f7ecdd 0%, transparent 55%),radial-gradient(circle at 92% 88%, #f6e6e6 0%, transparent 50%)}
+.cover .kicker{font-size:11px;letter-spacing:4px;color:var(--gold);margin-bottom:22px}
+.cover h1{font-size:52px;line-height:1.18;letter-spacing:2px;font-weight:700}
+.cover h1 em{font-style:normal;color:var(--red)}
+.cover .sub{margin-top:18px;font-size:14.5px;color:var(--ink2);letter-spacing:.5px}
+.cover .yr-line{margin-top:44px;display:flex;align-items:baseline;gap:10px;color:var(--gold);font-size:13px;letter-spacing:2px}
+.cover .yr-line b{font-size:15px;color:var(--red);letter-spacing:1px}
+.scroll-hint{position:absolute;left:0;right:0;bottom:34px;text-align:center;font-size:11px;color:var(--gray);letter-spacing:2px}
+.scroll-hint span{display:block;width:1px;height:34px;margin:10px auto 0;background:linear-gradient(var(--gold),transparent);animation:drop 1.8s infinite}
+@keyframes drop{0%{opacity:0;transform:translateY(-8px)}40%{opacity:1}100%{opacity:0;transform:translateY(10px)}}
+
+/* 章节 */
+.chapter{padding:74px 34px 64px;position:relative;opacity:.25;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
+.chapter.on{opacity:1;transform:none}
+.chapter .year{font-size:74px;line-height:1;font-weight:700;color:var(--red);letter-spacing:-1px}
+.chapter .year small{font-size:13px;color:var(--gold);letter-spacing:3px;margin-left:10px;vertical-align:super;font-weight:400}
+.chapter h2{margin-top:14px;font-size:25px;letter-spacing:.5px;line-height:1.5}
+.chapter p{margin-top:14px;font-size:14.5px;color:var(--ink2);line-height:1.95;text-align:justify}
+.chapter .tag{display:inline-block;margin-top:20px;font-size:11px;color:var(--gray);border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.chapter .hair{height:1px;background:linear-gradient(90deg,var(--gold),transparent);margin:24px 0 0;width:64px}
+.ask{display:inline-flex;align-items:center;gap:7px;margin-top:22px;font-size:13px;color:var(--red);text-decoration:none;
+  border:1px solid rgba(158,27,50,.28);border-radius:999px;padding:8px 15px;background:#fff}
+.ask:active{background:#fdf4f4}
+.quote{margin-top:26px;padding:18px 20px;background:#fff;border-left:3px solid var(--gold);font-size:14px;color:var(--ink2);
+  font-family:"Source Han Serif SC",Songti SC,SimSun,serif;line-height:1.9}
+
+/* 分隔的年份刻度 */
+.ruler{display:flex;gap:6px;padding:0 34px 26px;opacity:.9}
+.ruler i{flex:1;height:22px;border-top:1px solid var(--line);position:relative}
+.ruler i.hit{border-top-color:var(--red)}
+.ruler i.hit::after{content:"";position:absolute;top:-2px;left:50%;width:3px;height:3px;border-radius:50%;background:var(--red)}
+
+/* 结尾互动 */
+.end{padding:70px 34px 90px;background:linear-gradient(#fbf8f2,#f6efe3)}
+.end h2{font-size:26px;line-height:1.5;letter-spacing:.5px}
+.end .lead{margin-top:12px;font-size:13.5px;color:var(--ink2)}
+.picker{margin-top:26px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.picker input{width:118px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:16px;
+  letter-spacing:2px;background:#fff;outline:none;font-family:inherit;text-align:center}
+.picker input:focus{border-color:var(--red)}
+.picker button{border:0;background:var(--red);color:#fff;border-radius:10px;padding:13px 20px;font-size:14px;font-family:inherit}
+.card{margin-top:24px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:26px 24px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;left:0;top:0;width:4px;height:100%;background:var(--red)}
+.card .c-yr{font-size:12px;color:var(--gold);letter-spacing:3px}
+.card .c-big{font-size:34px;line-height:1.3;margin-top:8px;font-weight:700;letter-spacing:1px}
+.card .c-big b{color:var(--red);font-size:44px}
+.card .c-txt{margin-top:12px;font-size:13.5px;color:var(--ink2);line-height:1.9}
+.card .c-foot{margin-top:16px;font-size:10.5px;color:var(--gray);letter-spacing:1px}
+.card.empty{display:none}
+
+/* 页脚 */
+.foot{padding:30px 34px 46px;background:#f6efe3;border-top:1px solid var(--line);font-size:11px;color:var(--gray);line-height:2}
+.foot b{color:var(--ink2);font-weight:600}
+.foot a{color:var(--red);text-decoration:none}
+.toast{position:fixed;left:50%;bottom:40px;transform:translateX(-50%) translateY(20px);background:rgba(36,31,28,.92);color:#fff;
+  font-size:12.5px;padding:10px 18px;border-radius:999px;opacity:0;transition:.3s;pointer-events:none;z-index:40}
+.toast.on{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div class="bar"><i id="prog"></i></div>
+<div class="stage">
+
+  <section class="cover">
+    <div class="kicker">1902 — 2026</div>
+    <h1 class="serif">一百二十年，<br><em>一条时间轴</em>。</h1>
+    <p class="sub">从顺天府学堂的第一间教室，<br>到今天裕华路旁的这座校园。</p>
+    <div class="yr-line"><b>河北师范大学</b><span>校史 · 沿革</span></div>
+    <div class="scroll-hint">滑 动<span></span></div>
+  </section>
+
+  <div class="ruler" id="ruler"></div>
+
+  <section class="chapter" data-y="1902">
+    <div class="year">1902<small>光绪二十八年</small></div>
+    <h2 class="serif">顺天府学堂，在地安门外开学</h2>
+    <p>顺天府尹在北京地安门外兵将局旧址创办顺天府学堂，从京兆与顺天府各州县、以及在京官员子弟中招生。修身、经学、算学、历史、地理、博物、化学、法制、图画、体操、英文、法文、东文——课程表上已经看得见“新学”的样子，学制四年。</p>
+    <div class="quote">“建校之初，就以革故鼎新、开启民智为使命。”</div>
+    <a class="ask" href="https://mike-jzy.github.io/xiaoshi-huixiang/?q=1902年顺天府学堂是怎么回事" target="_blank" rel="noopener">问一问这段历史 →</a>
+  </section>
+
+  <section class="chapter" data-y="1906">
+    <div class="year">1906<small>光绪三十二年</small></div>
+    <h2 class="serif">天津三马路，北洋女师范学堂</h2>
+    <p>这一年的六月，北洋女师范学堂在天津三马路创建，随后迁往天纬路。它是中国最早的女子师范学堂之一：简易科一年半，完全科四年，本科五年——在那个年代，让女子读书、并且读成“先生”，是一件要写进历史的事。</p>
+    <div class="tag">两源汇流：一所在北京，一所在天津</div>
+  </section>
+
+  <section class="chapter" data-y="1913">
+    <div class="year">1913<small>民国二年</small></div>
+    <h2 class="serif">从学堂到中学，名字换了七次</h2>
+    <p>顺天高等学堂改为京兆公立第一中学。此后三十余年，校名随时代更迭：河北省立第十七中学、河北省立北平高级中学、北京市立高级中学……抗战胜利后恢复前名，1949 年改称河北北京高级中学。</p>
+    <p>一所学校的名字，几乎就是一部二十世纪上半叶的编年史。</p>
+  </section>
+
+  <section class="chapter" data-y="1929">
+    <div class="year">1929<small>民国十八年</small></div>
+    <h2 class="serif">河北女子师范学院，抗战时西迁</h2>
+    <p>河北省第一女子师范学校改为河北女子师范学院，设国文、家政、英文、史地、教育、音乐、体育七个系。抗战爆发，学校西迁，加入西北联合大学教育学院；胜利后回原址复校。1949 年改名河北师范学院，取消家政系，男女兼收。</p>
+    <div class="quote">“始终同中华民族争取独立、自由、民主、富强的进步事业同呼吸、共命运。”</div>
+  </section>
+
+  <section class="chapter" data-y="1956">
+    <div class="year">1956<small>石家庄</small></div>
+    <h2 class="serif">五系一科迁到裕华路</h2>
+    <p>天津河北师范学院的数学、物理、化学、地理、体育五系，与河北北京师范学院的生物科迁到石家庄裕华路，组建石家庄师范学院；同年，河北北京师范学院在京津扩建。1960 年石家庄师范学院改名石家庄师范大学，增设中文、历史两系；1962 年定名河北师范大学。</p>
+    <div class="tag">今天裕华校区的起点</div>
+  </section>
+
+  <section class="chapter" data-y="1996">
+    <div class="year">1996<small>四校合一</small></div>
+    <h2 class="serif">四所学校，合并成今天的师大</h2>
+    <p>原河北师范大学、河北师范学院，与创建于 1952 年的河北教育学院、创建于 1984 年的河北职业技术师范学院合并，组建新的河北师范大学。</p>
+    <p>四条不同的来路，从此汇成一条。</p>
+    <a class="ask" href="https://mike-jzy.github.io/xiaoshi-huixiang/?q=河北师范大学是哪几所学校合并的" target="_blank" rel="noopener">问一问这段历史 →</a>
+  </section>
+
+  <section class="chapter" data-y="2014">
+    <div class="year">2014<small>省部共建</small></div>
+    <h2 class="serif">河北省人民政府与教育部共建</h2>
+    <p>这一年起，河北师范大学成为省部共建高校。此后十余年，学校进入河北省“双一流”建设一层次，化学、植物与动物科学、工程学、材料科学四个学科进入 ESI 全球前 1%，本科专业 80 个，博士一级学科学位授权点 11 个。</p>
+    <div class="tag">数据截至 2026 年 11 月</div>
+  </section>
+
+  <section class="end">
+    <div class="kicker" style="font-size:11px;letter-spacing:4px;color:var(--gold)">YOUR YEAR</div>
+    <h2 class="serif" style="margin-top:14px">你入学那年，<br>师大已经走了多久？</h2>
+    <p class="lead">输入你的入学年份，看看那一年学校在做什么。</p>
+    <div class="picker">
+      <input id="year" type="tel" maxlength="4" placeholder="2025" inputmode="numeric">
+      <button id="gen">生成</button>
+    </div>
+    <div class="card empty" id="card">
+      <div class="c-yr" id="cYr"></div>
+      <div class="c-big" id="cBig"></div>
+      <div class="c-txt" id="cTxt"></div>
+      <div class="c-foot">长按这张卡片保存 · 河北师范大学 2026 校园网络文化节</div>
+    </div>
+
+    <div style="margin-top:56px;font-size:12px;color:var(--gray);line-height:2">
+      资料来自学校官网「学校简介」「历史沿革」「学校标识」三个页面，<br>逐条可核对。
+    </div>
+  </section>
+
+  <div class="foot">
+    <b>百廿师大 · 一条时间轴</b><br>
+    河北师范大学 2026 年度校园网络文化节 · 网创梦工厂赛道<br>
+    作者：姜志阳（计算机与网络空间安全学院 计算机科学与技术 2025 级）<br>
+    延伸：<a href="https://mike-jzy.github.io/xiaoshi-huixiang/" target="_blank" rel="noopener">校史回响 · 校史智能讲解员</a>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  var sp = new URLSearchParams(location.search);
+  if (sp.get('vh')) { document.documentElement.style.setProperty('--cover-h', sp.get('vh') + 'px'); }
+  if (sp.get('solo') === 'end') {
+    var cv = document.querySelector('.cover'); if (cv) cv.style.display = 'none';
+    [].slice.call(document.querySelectorAll('.chapter')).forEach(function (c) { c.style.display = 'none'; });
+  }
+  if (sp.get('s')) { window.scrollTo(0, parseInt(sp.get('s'), 10) || 0); document.documentElement.style.scrollBehavior = 'auto'; }
+  var chapters = [].slice.call(document.querySelectorAll('.chapter'));
+  var prog = document.getElementById('prog');
+  var stage = document.querySelector('.stage');
+
+  // 顶部进度
+  function onScroll() {
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    prog.style.width = (h > 0 ? (window.scrollY / h) * 100 : 0) + '%';
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // 章节入场
+  if ('IntersectionObserver' in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) e.target.classList.add('on');
+      });
+    }, { threshold: 0.28 });
+    chapters.forEach(function (c) { io.observe(c); });
+  } else {
+    chapters.forEach(function (c) { c.classList.add('on'); });
+  }
+
+  // 刻度尺：每个章节一个刻点
+  var ruler = document.getElementById('ruler');
+  chapters.forEach(function (c, i) {
+    var d = document.createElement('i');
+    if (i % 2 === 0) d.className = 'hit';
+    ruler.appendChild(d);
+  });
+
+  // 数据：与时间轴一一对应
+  var NODES = [
+    { y: 1902, t: '顺天府学堂创办', d: '顺天府尹在北京地安门外兵将局旧址创办顺天府学堂，学制四年，开设算学、化学、博物等新学课程。' },
+    { y: 1906, t: '北洋女师范学堂创建', d: '创建于天津三马路，是中国最早的女子师范学堂之一。' },
+    { y: 1913, t: '京兆公立第一中学', d: '顺天高等学校改为京兆公立第一中学，此后数度更名。' },
+    { y: 1929, t: '河北女子师范学院', d: '设国文、家政、英文、史地、教育、音乐、体育七系。' },
+    { y: 1949, t: '男女兼收', d: '改名河北师范学院，取消家政系，开始男女兼收。' },
+    { y: 1956, t: '五系一科迁石家庄', d: '数学、物理、化学、地理、体育五系与生物科迁至石家庄裕华路，组建石家庄师范学院。' },
+    { y: 1960, t: '石家庄师范大学', d: '增设中文、历史两系。' },
+    { y: 1962, t: '定名河北师范大学', d: '由石家庄师范大学改名，为当时河北省属六所重点大学之一。' },
+    { y: 1984, t: '职业技术师范学院', d: '河北职业技术师范专科学校创建，1988 年定名河北师范大学职业技术师范学院。' },
+    { y: 1996, t: '四校合并', d: '与原河北师范大学、河北师范学院、河北教育学院合并，组建新的河北师范大学。' },
+    { y: 2014, t: '省部共建', d: '河北省人民政府与教育部决定共建河北师范大学。' },
+    { y: 2026, t: '今天的师大', d: '本科专业 80 个，博士一级学科学位授权点 11 个，4 个学科进入 ESI 全球前 1%。' }
+  ];
+
+  function nodeFor(y) {
+    var hit = null;
+    for (var i = 0; i < NODES.length; i++) {
+      if (NODES[i].y <= y) hit = NODES[i];
+    }
+    return hit || NODES[0];
+  }
+
+  var toast = document.getElementById('toast');
+  function tip(msg) {
+    toast.textContent = msg;
+    toast.classList.add('on');
+    setTimeout(function () { toast.classList.remove('on'); }, 2200);
+  }
+
+  document.getElementById('gen').addEventListener('click', function () {
+    var raw = document.getElementById('year').value.replace(/\D/g, '');
+    var y = parseInt(raw, 10);
+    if (!y || y < 1902 || y > 2026) { tip('请输入 1902 — 2026 之间的年份'); return; }
+    var n = nodeFor(y);
+    var span = y - 1902;
+    document.getElementById('cYr').textContent = 'ADMISSION ' + y + ' · 建校 ' + Math.max(span, 0) + ' 周年';
+    document.getElementById('cBig').innerHTML = '你入学时，<br>师大已经走过 <b>' + Math.max(span, 0) + '</b> 年';
+    var extra = (y >= 2014) ? '此后学校进入河北省“双一流”建设一层次，化学、植物与动物科学、工程学、材料科学四个学科进入 ESI 全球前 1%。' : '';
+    document.getElementById('cTxt').innerHTML = '那一年前后，学校的大事是：<b>' + n.y + ' 年，' + n.t + '</b>。' + n.d + extra;
+    document.getElementById('card').classList.remove('empty');
+    document.getElementById('card').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  if (sp.get('dbg')) {
+    var c0 = chapters[0], p0 = c0.querySelector('p');
+    document.title = 'DBG w=' + document.documentElement.clientWidth +
+      ' body=' + document.body.scrollWidth + ' stage=' + document.querySelector('.stage').offsetWidth +
+      ' ch=' + c0.offsetWidth + ' p=' + p0.offsetWidth + ' rect=' + Math.round(p0.getBoundingClientRect().width);
+  }
+  if (sp.get('y')) {
+    document.getElementById('year').value = sp.get('y');
+    setTimeout(function () { document.getElementById('gen').click(); }, 50);
+  }
+  document.getElementById('year').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { document.getElementById('gen').click(); this.blur(); }
+  });
+})();
+</script>
+</body>
+</html>
